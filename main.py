@@ -189,32 +189,43 @@ def extract_to_minecraft(zip_path, minecraft_folder):
     """Распаковка архива прямо в папку Minecraft"""
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            # Сначала проверяем содержимое
+            # Получаем список файлов
             file_list = zip_ref.namelist()
             
-            # Фильтруем только нужные файлы
-            crack_files = [f for f in file_list if f.endswith(('.dll', '.txt', '.ini'))]
+            # Счетчик скопированных файлов
+            copied = 0
             
-            if not crack_files:
-                # Если структура архива другая, ищем в подпапках
-                for file in file_list:
-                    if file.endswith(('.dll', '.txt', '.ini')):
-                        # Извлекаем прямо в корень
-                        zip_ref.extract(file, minecraft_folder)
-                        extracted_path = os.path.join(minecraft_folder, file)
-                        
+            for file in file_list:
+                # Извлекаем файл
+                zip_ref.extract(file, minecraft_folder)
+                
+                # Полный путь к извлеченному файлу
+                extracted_path = os.path.join(minecraft_folder, file)
+                
+                # Если это файл (а не папка)
+                if os.path.isfile(extracted_path):
+                    # Проверяем нужные ли это файлы
+                    filename = os.path.basename(file)
+                    if filename in ['winmm.dll', 'OnlineFix64.dll', 'OnlineFix.ini', 'dlllist.txt']:
                         # Если файл был в подпапке, перемещаем его в корень
                         if os.path.dirname(file):
-                            final_path = os.path.join(minecraft_folder, os.path.basename(file))
-                            if os.path.exists(extracted_path) and extracted_path != final_path:
-                                shutil.move(extracted_path, final_path)
+                            target_path = os.path.join(minecraft_folder, filename)
+                            if extracted_path != target_path:
+                                shutil.move(extracted_path, target_path)
+                                extracted_path = target_path
+                        
+                        print_color(f"[✓] Установлен: {filename}", Colors.GREEN)
+                        copied += 1
+            
+            if copied > 0:
+                print_color(f"[✓] Установлено файлов: {copied}", Colors.GREEN)
+                return True
             else:
-                # Извлекаем все файлы крака
-                for file in crack_files:
-                    zip_ref.extract(file, minecraft_folder)
-                    
-        return True
-    except Exception:
+                print_color("[!] В архиве не найдены файлы крака", Colors.RED)
+                return False
+                
+    except Exception as e:
+        print_color(f"[!] Ошибка распаковки: {e}", Colors.RED)
         return False
 
 def find_minecraft_folder():
